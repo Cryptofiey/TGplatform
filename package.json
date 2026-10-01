@@ -1,0 +1,21 @@
+{
+  "name": "telegram-web-platform",
+  "version": "1.0.0",
+  "description": "Modular Telegram Web Fork based on The Granite Stack architecture (Layers 0-3, Omnirout, UI Slot Matrix, Plugin Ecosystem)",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node bin/server.js",
+    "test": "node test/platform_test.js"
+  },
+  "keywords": [
+    "telegram",
+    "fork",
+    "granite-stack",
+    "omnirout",
+    "plugins",
+    "inverted-agent",
+    "haat"
+  ],
+  "author": "Autonomous Spark Lead",
+  "license": "MIT"
+}

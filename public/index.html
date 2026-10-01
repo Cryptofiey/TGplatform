@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Telegram Web Fork — The Granite Stack Platform</title>
+  <style>
+    :root {
+      --tg-platform-bg: #0f172a;
+      --tg-platform-surface: #1e293b;
+      --tg-platform-surface-hover: #334155;
+      --tg-platform-border: #334155;
+      --tg-platform-accent: #38bdf8;
+      --tg-platform-accent-glow: rgba(56, 189, 248, 0.25);
+      --tg-platform-text: #f8fafc;
+      --tg-platform-text-muted: #94a3b8;
+      --tg-platform-success: #10b981;
+      --tg-platform-warning: #f59e0b;
+      --tg-platform-danger: #ef4444;
+      --tg-platform-purple: #a855f7;
+      --tg-platform-radius-m: 8px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--tg-platform-bg); color: var(--tg-platform-text); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+
+    /* App Frame */
+    .app-frame { display: flex; flex: 1; height: calc(100vh - 48px); }
+
+    /* Primary Rail (Tier 2 Split Rail Matrix) */
+    .primary-rail {
+      width: 64px;
+      background: #090d16;
+      border-right: 1px solid var(--tg-platform-border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 14px 0;
+      gap: 16px;
+      z-index: 10;
+    }
+    .rail-btn {
+      width: 46px;
+      height: 46px;
+      border-radius: var(--tg-platform-radius-m);
+      background: transparent;
+      border: none;
+      color: var(--tg-platform-text-muted);
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      transition: all 0.2s ease;
+    }
+    .rail-btn:hover { background: var(--tg-platform-surface); color: var(--tg-platform-text); }
+    .rail-btn.active { background: var(--tg-platform-surface); color: var(--tg-platform-accent); box-shadow: 0 0 14px var(--tg-platform-accent-glow); }
+    .rail-pulse-badge {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 8px;
+      height: 8px;
+      background: var(--tg-platform-accent);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--tg-platform-accent);
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse { 0% { transform: scale(0.9); opacity: 0.7; } 50% { transform: scale(1.3); opacity: 1; } 100% { transform: scale(0.9); opacity: 0.7; } }
+
+    /* Secondary Column (Master List) */
+    .secondary-column {
+      width: 320px;
+      background: var(--tg-platform-surface);
+      border-right: 1px solid var(--tg-platform-border);
+      display: flex;
+      flex-direction: column;
+    }
+    .column-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--tg-platform-border);
+      font-size: 15px;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .search-box-row {
+      display: flex;
+      padding: 10px 14px;
+      gap: 8px;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+    }
+    .search-box {
+      flex: 1;
+      padding: 8px 12px;
+      background: var(--tg-platform-bg);
+      border: 1px solid var(--tg-platform-border);
+      border-radius: var(--tg-platform-radius-m);
+      color: var(--tg-platform-text);
+      font-size: 13px;
+      outline: none;
+    }
+    .btn-new-chat {
+      background: var(--tg-platform-accent);
+      color: #0f172a;
+      border: none;
+      border-radius: var(--tg-platform-radius-m);
+      padding: 0 10px;
+      font-weight: bold;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .entity-list { flex: 1; overflow-y: auto; }
+    .entity-item {
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: background 0.15s;
+    }
+    .entity-item:hover { background: var(--tg-platform-surface-hover); }
+    .entity-item.active { background: #1e3a5f; }
+    .entity-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #2563eb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .entity-info { flex: 1; min-width: 0; }
+    .entity-name { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+    .entity-sub { font-size: 12px; color: var(--tg-platform-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* Stage Area (Сцена) */
+    .stage-area { flex: 1; background: var(--tg-platform-bg); display: flex; flex-direction: column; position: relative; }
+    .stage-header {
+      padding: 14px 20px;
+      background: var(--tg-platform-surface);
+      border-bottom: 1px solid var(--tg-platform-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .stage-title { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+    .badge-chip {
+      background: #1e3a5f;
+      color: var(--tg-platform-accent);
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: bold;
+      border: 1px solid var(--tg-platform-accent);
+    }
+    .stage-body { flex: 1; padding: 20px; overflow-y: auto; }
+
+    /* Chat Messages */
+    .chat-messages { display: flex; flex-direction: column; gap: 12px; }
+    .msg-bubble {
+      max-width: 70%;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    .msg-incoming { background: var(--tg-platform-surface); align-self: flex-start; border-bottom-left-radius: 2px; border: 1px solid var(--tg-platform-border); }
+    .msg-outgoing { background: #0284c7; align-self: flex-end; border-bottom-right-radius: 2px; }
+    .msg-bot { background: #312e81; border: 1px solid #6366f1; align-self: flex-start; border-bottom-left-radius: 2px; }
+    
+    .quick-actions-bar {
+      padding: 6px 16px;
+      background: #162032;
+      border-top: 1px solid var(--tg-platform-border);
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+    }
+    .btn-quick {
+      padding: 4px 10px;
+      font-size: 11px;
+      border-radius: 6px;
+      background: var(--tg-platform-surface);
+      color: var(--tg-platform-accent);
+      border: 1px solid var(--tg-platform-border);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-quick:hover { background: var(--tg-platform-surface-hover); border-color: var(--tg-platform-accent); }
+
+    .chat-input-bar {
+      padding: 12px 20px;
+      background: var(--tg-platform-surface);
+      border-top: 1px solid var(--tg-platform-border);
+      display: flex;
+      gap: 12px;
+    }
+    .chat-input {
+      flex: 1;
+      padding: 10px 14px;
+      background: var(--tg-platform-bg);
+      border: 1px solid var(--tg-platform-border);
+      border-radius: var(--tg-platform-radius-m);
+      color: var(--tg-platform-text);
+      font-size: 14px;
+      outline: none;
+    }
+    .btn-send {
+      padding: 10px 20px;
+      background: var(--tg-platform-accent);
+      color: #0f172a;
+      border: none;
+      border-radius: var(--tg-platform-radius-m);
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    /* Inverted Director Grid */
+    .director-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 20px; }
+    .director-card { background: var(--tg-platform-surface); padding: 16px; border-radius: var(--tg-platform-radius-m); border: 1px solid var(--tg-platform-border); }
+    .haat-directive-box {
+      background: #3b1803;
+      border: 1px solid #d97706;
+      border-radius: var(--tg-platform-radius-m);
+      padding: 18px;
+      margin-bottom: 20px;
+    }
+    .haat-title { font-size: 15px; font-weight: bold; color: #f59e0b; margin-bottom: 8px; }
+    .haat-actions { display: flex; gap: 10px; margin-top: 12px; }
+    .btn-haat-submit { background: var(--tg-platform-success); color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    .btn-haat-reject { background: var(--tg-platform-danger); color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+
+    /* CRM Kanban Board */
+    .kanban-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; height: 100%; }
+    .kanban-col { background: var(--tg-platform-surface); border-radius: var(--tg-platform-radius-m); border: 1px solid var(--tg-platform-border); display: flex; flex-direction: column; overflow: hidden; }
+    .kanban-col-header { padding: 12px 16px; font-size: 14px; font-weight: bold; border-bottom: 1px solid var(--tg-platform-border); display: flex; justify-content: space-between; }
+    .kanban-cards { flex: 1; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+    .kanban-card { background: var(--tg-platform-bg); border: 1px solid var(--tg-platform-border); border-radius: 6px; padding: 12px; }
+    .kanban-card-title { font-size: 13px; font-weight: bold; margin-bottom: 4px; }
+    .kanban-card-meta { font-size: 11px; color: var(--tg-platform-text-muted); margin-bottom: 8px; }
+    .btn-advance { background: #1e3a5f; color: var(--tg-platform-accent); border: 1px solid var(--tg-platform-accent); padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; }
+
+    /* Music Stage */
+    .music-queue { display: flex; flex-direction: column; gap: 8px; }
+    .music-item { background: var(--tg-platform-surface); padding: 12px 16px; border-radius: 6px; border: 1px solid var(--tg-platform-border); display: flex; align-items: center; justify-content: space-between; }
+    .music-item.active { border-color: var(--tg-platform-accent); background: #1e293b; }
+
+    /* Bottom Dock (Mini Audio Player) */
+    .bottom-dock {
+      height: 48px;
+      background: #090d16;
+      border-top: 1px solid var(--tg-platform-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      font-size: 13px;
+    }
+    .player-controls { display: flex; align-items: center; gap: 12px; }
+    .player-btn { background: transparent; border: none; color: var(--tg-platform-text); font-size: 16px; cursor: pointer; }
+    .player-btn:hover { color: var(--tg-platform-accent); }
+  </style>
+</head>
+<body>
+
+  <div class="app-frame">
+    <!-- Primary Rail (Split Rail Matrix) -->
+    <nav class="primary-rail">
+      <button class="rail-btn active" id="btn-rail-tg" onclick="switchView('telegram')" title="Чаты Telegram">💬</button>
+      <button class="rail-btn" id="btn-rail-ai" onclick="switchView('ai_director')" title="Inverted AI Director">
+        🤖
+        <span class="rail-pulse-badge"></span>
+      </button>
+      <button class="rail-btn" id="btn-rail-crm" onclick="switchView('crm')" title="CRM Leads Pipeline">📊</button>
+      <button class="rail-btn" id="btn-rail-music" onclick="switchView('music')" title="Music Cast Player">🎵</button>
+    </nav>
+
+    <!-- Secondary Column -->
+    <aside class="secondary-column">
+      <div class="column-header">
+        <span id="col-title">Чаты Telegram</span>
+        <span class="badge-chip" id="col-badge">Online</span>
+      </div>
+      <div class="search-box-row">
+        <input type="text" class="search-box" id="search-input" placeholder="Поиск..." oninput="onSearchChange()">
+        <button class="btn-new-chat" id="btn-create-chat" onclick="promptNewChat()" title="Создать чат">+</button>
+      </div>
+      <div class="entity-list" id="entity-list">
+        <!-- Rendered dynamically -->
+      </div>
+    </aside>
+
+    <!-- Stage Area -->
+    <main class="stage-area" id="stage-container">
+      <div class="stage-header">
+        <div class="stage-title" id="stage-title">Диалог</div>
+        <div id="stage-badge-container"></div>
+      </div>
+      <div class="stage-body" id="stage-body">
+        <!-- Rendered dynamically -->
+      </div>
+      <div class="quick-actions-bar" id="quick-actions-container">
+        <button class="btn-quick" onclick="sendQuickText('/status')">🤖 /status</button>
+        <button class="btn-quick" onclick="sendQuickText('/help')">ℹ️ /help</button>
+        <button class="btn-quick" onclick="sendQuickText('бред')">🛑 Вето: Бред / Отклонить</button>
+        <button class="btn-quick" onclick="sendQuickText('Интересует проект #deal 25000')">💼 #deal $25k</button>
+        <button class="btn-quick" onclick="sendQuickText('/audio Andaman Dream - Chillout')">🎵 /audio Трек</button>
+      </div>
+      <div class="chat-input-bar" id="chat-input-container">
+        <input type="text" class="chat-input" id="chat-input" placeholder="Напишите сообщение..." onkeydown="if(event.key==='Enter')sendMessage()">
+        <button class="btn-send" onclick="sendMessage()">Отправить</button>
+      </div>
+    </main>
+  </div>
+
+  <!-- Bottom Dock -->
+  <footer class="bottom-dock">
+    <div class="player-controls">
+      <button class="player-btn" onclick="togglePlayAudio()" id="btn-play-pause">▶️</button>
+      <button class="player-btn" onclick="nextAudioTrack()" title="Next Track">⏭️</button>
+      <span id="track-info" style="color: var(--tg-platform-text-muted);">Music Cast: No active stream</span>
+    </div>
+    <div style="color: var(--tg-platform-accent); font-size: 11px;">The Granite Stack: Layer 0-3 Operational (Circuit Breakers: Active)</div>
+  </footer>
+
+  <script>
+    let activeView = 'telegram';
+    let activeChatId = '101';
+    let searchQuery = '';
+    let platformState = null;
+
+    async function fetchState() {
+      try {
+        const res = await fetch('/api/platform/state');
+        platformState = await res.json();
+        render();
+      } catch (err) {
+        console.error('Failed to sync platform state:', err);
+      }
+    }
+
+    function switchView(view) {
+      activeView = view;
+      document.querySelectorAll('.rail-btn').forEach(b => b.classList.remove('active'));
+      if (view === 'telegram') document.getElementById('btn-rail-tg').classList.add('active');
+      if (view === 'ai_director') document.getElementById('btn-rail-ai').classList.add('active');
+      if (view === 'crm') document.getElementById('btn-rail-crm').classList.add('active');
+      if (view === 'music') document.getElementById('btn-rail-music').classList.add('active');
+      render();
+    }
+
+    function onSearchChange() {
+      searchQuery = document.getElementById('search-input').value.toLowerCase().trim();
+      render();
+    }
+
+    async function promptNewChat() {
+      const title = prompt('Введите название нового диалога или группы:');
+      if (!title) return;
+      const res = await fetch('/api/chats/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title })
+      });
+      const data = await res.json();
+      if (data.chatId) {
+        activeChatId = data.chatId;
+        fetchState();
+      }
+    }
+
+    function sendQuickText(text) {
+      document.getElementById('chat-input').value = text;
+      sendMessage();
+    }
+
+    function render() {
+      if (!platformState) return;
+
+      const entityList = document.getElementById('entity-list');
+      const stageBody = document.getElementById('stage-body');
+      const stageTitle = document.getElementById('stage-title');
+      const badgeContainer = document.getElementById('stage-badge-container');
+      const inputContainer = document.getElementById('chat-input-container');
+      const quickContainer = document.getElementById('quick-actions-container');
+      const btnNewChat = document.getElementById('btn-create-chat');
+
+      // Update bottom player
+      const music = platformState.music;
+      if (music && music.currentTrack && music.currentTrack.track) {
+        const t = music.currentTrack.track;
+        document.getElementById('track-info').innerText = `${t.title} — ${t.performer}`;
+        document.getElementById('btn-play-pause').innerText = music.currentTrack.isPlaying ? '⏸️' : '▶️';
+      }
+
+      if (activeView === 'telegram') {
+        document.getElementById('col-title').innerText = 'Чаты Telegram';
+        document.getElementById('col-badge').innerText = platformState.chats.length + ' чатов';
+        btnNewChat.style.display = 'block';
+        inputContainer.style.display = 'flex';
+        quickContainer.style.display = 'flex';
+
+        const filteredChats = platformState.chats.filter(c => 
+          !searchQuery || c.title.toLowerCase().includes(searchQuery) || (c.lastMessage && c.lastMessage.text.toLowerCase().includes(searchQuery))
+        );
+
+        entityList.innerHTML = filteredChats.map(c => `
+          <div class="entity-item ${c.id === activeChatId ? 'active' : ''}" onclick="selectChat('${c.id}')">
+            <div class="entity-avatar">${c.title.substring(0, 1).toUpperCase()}</div>
+            <div class="entity-info">
+              <div class="entity-name">${c.title}</div>
+              <div class="entity-sub">${c.lastMessage ? c.lastMessage.text : 'Нет сообщений'}</div>
+            </div>
+          </div>
+        `).join('');
+
+        const activeChat = platformState.chats.find(c => c.id === activeChatId) || platformState.chats[0];
+        if (activeChat) activeChatId = activeChat.id;
+        stageTitle.innerText = activeChat ? activeChat.title : 'Диалог';
+
+        // Check badges from CRM plugin
+        const deal = platformState.crmDeals.find(d => d.chatId === activeChatId);
+        badgeContainer.innerHTML = deal ? `<span class="badge-chip">Deal: ${deal.stage} ($${deal.amount})</span>` : '';
+
+        const messages = platformState.messages[activeChatId] || [];
+        stageBody.innerHTML = `
+          <div class="chat-messages">
+            ${messages.map(m => {
+              const isOutgoing = m.senderId === 'me';
+              const isBot = m.senderId === 'ai_director' || m.senderId === 'crm_bot';
+              const bubbleClass = isOutgoing ? 'msg-outgoing' : (isBot ? 'msg-bot' : 'msg-incoming');
+              
+              let mediaHtml = '';
+              if (m.media && m.media.category === 'audio') {
+                mediaHtml = `
+                  <div style="margin-top:6px;padding:6px 10px;background:rgba(0,0,0,0.2);border-radius:6px;display:flex;align-items:center;gap:8px;">
+                    <span>🎵</span>
+                    <div>
+                      <strong>${m.media.title}</strong> — ${m.media.performer}
+                      <div style="font-size:10px;opacity:0.8;">Аудиопоток • ${m.media.duration} сек.</div>
+                    </div>
+                  </div>
+                `;
+              }
+
+              return `
+                <div class="msg-bubble ${bubbleClass}">
+                  <div style="font-size:11px;opacity:0.75;margin-bottom:2px;font-weight:600;">${m.senderName}</div>
+                  <div style="white-space:pre-wrap;">${m.text}</div>
+                  ${mediaHtml}
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+      } else if (activeView === 'ai_director') {
+        document.getElementById('col-title').innerText = 'Целевой Граф (DAG)';
+        document.getElementById('col-badge').innerText = platformState.aiDirector.delta.progressPercent + '%';
+        btnNewChat.style.display = 'none';
+        inputContainer.style.display = 'none';
+        quickContainer.style.display = 'none';
+
+        const filteredNodes = platformState.aiDirector.nodes.filter(n =>
+          !searchQuery || n.title.toLowerCase().includes(searchQuery) || n.id.toLowerCase().includes(searchQuery)
+        );
+
+        entityList.innerHTML = filteredNodes.map(n => `
+          <div class="entity-item">
+            <div class="entity-avatar" style="background:#0284c7;font-size:12px;">${n.status.substring(0, 3)}</div>
+            <div class="entity-info">
+              <div class="entity-name">${n.title}</div>
+              <div class="entity-sub">${n.requiresHuman ? '🔒 Requires Human' : 'Auto Worker'}</div>
+            </div>
+          </div>
+        `).join('');
+
+        stageTitle.innerText = 'Inverted AI Director — Directive Terminal';
+        badgeContainer.innerHTML = `<span class="badge-chip" style="background:#047857;color:#fff;">Гомеостаз: ${platformState.aiDirector.delta.progressPercent}%</span>`;
+
+        const activeCalls = platformState.aiDirector.activeHumanCalls || [];
+
+        stageBody.innerHTML = `
+          <div class="director-grid">
+            <div class="director-card">
+              <div style="font-size:12px;color:var(--tg-platform-text-muted);">ЦЕЛЬ СИСТЕМЫ</div>
+              <div style="font-size:15px;font-weight:bold;margin-top:4px;">${platformState.aiDirector.goal}</div>
+            </div>
+            <div class="director-card">
+              <div style="font-size:12px;color:var(--tg-platform-text-muted);">СТАТУС ГОМЕОСТАЗА</div>
+              <div style="font-size:24px;font-weight:bold;color:var(--tg-platform-accent);">${platformState.aiDirector.delta.progressPercent}%</div>
+            </div>
+            <div class="director-card">
+              <div style="font-size:12px;color:var(--tg-platform-text-muted);">ОЖИДАЮТ ОПЕРАТОРА</div>
+              <div style="font-size:24px;font-weight:bold;color:var(--tg-platform-warning);">${activeCalls.length}</div>
+            </div>
+          </div>
+
+          ${activeCalls.length > 0 ? activeCalls.map(c => `
+            <div class="haat-directive-box">
+              <div class="haat-title">🚨 ТРЕБУЕТСЯ ДЕЙСТВИЕ ЧЕЛОВЕКА-ВОРКЕРА: ${c.nodeId}</div>
+              <div style="font-size:13px;margin-bottom:6px;"><strong>Обоснование (Proof of Necessity):</strong> <em>${c.proofOfNecessity}</em></div>
+              <div style="font-size:13px;margin-bottom:10px;"><strong>Инструкция:</strong> ${c.instruction}</div>
+              <input type="text" id="haat-input-${c.nodeId}" class="chat-input" placeholder="Введите требуемое значение..." style="width:100%;">
+              <div class="haat-actions">
+                <button class="btn-haat-submit" onclick="submitHaaT('${c.nodeId}')">Отправить как HumanWorker</button>
+                <button class="btn-haat-reject" onclick="rejectHaaT('${c.nodeId}')">Бред / Отклонить</button>
+              </div>
+            </div>
+          `).join('') : '<div style="color:var(--tg-platform-text-muted);padding:30px;text-align:center;background:var(--tg-platform-surface);border-radius:8px;">✅ Все автоматические воркеры выполняются автономно. Блокировок HaaT нет.</div>'}
+        `;
+      } else if (activeView === 'crm') {
+        document.getElementById('col-title').innerText = 'CRM Воронка';
+        document.getElementById('col-badge').innerText = platformState.crmDeals.length + ' сделок';
+        btnNewChat.style.display = 'none';
+        inputContainer.style.display = 'none';
+        quickContainer.style.display = 'none';
+
+        entityList.innerHTML = platformState.crmDeals.map(d => `
+          <div class="entity-item">
+            <div class="entity-avatar" style="background:#059669;">$</div>
+            <div class="entity-info">
+              <div class="entity-name">${d.leadName}</div>
+              <div class="entity-sub">${d.stage} - $${d.amount}</div>
+            </div>
+          </div>
+        `).join('');
+
+        stageTitle.innerText = 'Воронка Лидов (Kanban Matrix)';
+        badgeContainer.innerHTML = '';
+
+        const qualified = platformState.crmDeals.filter(d => d.stage === 'Qualified');
+        const inProgress = platformState.crmDeals.filter(d => d.stage === 'In Progress');
+        const won = platformState.crmDeals.filter(d => d.stage === 'Won');
+
+        stageBody.innerHTML = `
+          <div class="kanban-board">
+            <div class="kanban-col">
+              <div class="kanban-col-header" style="color:var(--tg-platform-accent);">
+                <span>Qualified</span>
+                <span>(${qualified.length})</span>
+              </div>
+              <div class="kanban-cards">
+                ${qualified.map(d => `
+                  <div class="kanban-card">
+                    <div class="kanban-card-title">${d.leadName}</div>
+                    <div class="kanban-card-meta">Чат ID: ${d.chatId} • $${d.amount}</div>
+                    <button class="btn-advance" onclick="updateDealStage('${d.chatId}', 'In Progress')">В работу ➔</button>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+
+            <div class="kanban-col">
+              <div class="kanban-col-header" style="color:var(--tg-platform-warning);">
+                <span>In Progress</span>
+                <span>(${inProgress.length})</span>
+              </div>
+              <div class="kanban-cards">
+                ${inProgress.map(d => `
+                  <div class="kanban-card">
+                    <div class="kanban-card-title">${d.leadName}</div>
+                    <div class="kanban-card-meta">Чат ID: ${d.chatId} • $${d.amount}</div>
+                    <button class="btn-advance" onclick="updateDealStage('${d.chatId}', 'Won')">Закрыть / Выиграно ➔</button>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+
+            <div class="kanban-col">
+              <div class="kanban-col-header" style="color:var(--tg-platform-success);">
+                <span>Won</span>
+                <span>(${won.length})</span>
+              </div>
+              <div class="kanban-cards">
+                ${won.map(d => `
+                  <div class="kanban-card">
+                    <div class="kanban-card-title">${d.leadName}</div>
+                    <div class="kanban-card-meta">Успешно закрыта • $${d.amount}</div>
+                    <span style="font-size:11px;color:var(--tg-platform-success);font-weight:bold;">🏆 Сделка завершена</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (activeView === 'music') {
+        document.getElementById('col-title').innerText = 'Аудиопотоки';
+        document.getElementById('col-badge').innerText = (music.playlist ? music.playlist.length : 0) + ' треков';
+        btnNewChat.style.display = 'none';
+        inputContainer.style.display = 'none';
+        quickContainer.style.display = 'none';
+
+        const playlist = music.playlist || [];
+
+        entityList.innerHTML = playlist.map((t, idx) => `
+          <div class="entity-item ${music.currentTrack && music.currentTrack.currentIndex === idx ? 'active' : ''}" onclick="playAudioTrack(${idx})">
+            <div class="entity-avatar" style="background:#7c3aed;">🎵</div>
+            <div class="entity-info">
+              <div class="entity-name">${t.title}</div>
+              <div class="entity-sub">${t.performer}</div>
+            </div>
+          </div>
+        `).join('');
+
+        stageTitle.innerText = 'Music Cast — Плеер аудиопотоков Telegram';
+        badgeContainer.innerHTML = `<span class="badge-chip">Stream Active</span>`;
+
+        stageBody.innerHTML = `
+          <div style="max-width:600px;margin:0 auto;">
+            <div class="director-card" style="text-align:center;padding:30px;margin-bottom:20px;">
+              <div style="font-size:48px;margin-bottom:12px;">🎶</div>
+              <h2 style="font-size:20px;margin-bottom:6px;">${music.currentTrack && music.currentTrack.track ? music.currentTrack.track.title : 'Нет активного трека'}</h2>
+              <div style="color:var(--tg-platform-text-muted);font-size:14px;margin-bottom:20px;">${music.currentTrack && music.currentTrack.track ? music.currentTrack.track.performer : 'Выберите аудиопоток из списка'}</div>
+              <div style="display:flex;justify-content:center;gap:16px;">
+                <button class="btn-send" onclick="togglePlayAudio()">${music.currentTrack && music.currentTrack.isPlaying ? 'Пауза ⏸️' : 'Воспроизведение ▶️'}</button>
+                <button class="btn-send" style="background:var(--tg-platform-surface);color:var(--tg-platform-text);border:1px solid var(--tg-platform-border);" onclick="nextAudioTrack()">Следующий ⏭️</button>
+              </div>
+            </div>
+
+            <h3 style="margin-bottom:12px;font-size:15px;">Очередь воспроизведения из каналов</h3>
+            <div class="music-queue">
+              ${playlist.map((t, idx) => `
+                <div class="music-item ${music.currentTrack && music.currentTrack.currentIndex === idx ? 'active' : ''}">
+                  <div>
+                    <strong>${t.title}</strong> — ${t.performer}
+                    <div style="font-size:11px;color:var(--tg-platform-text-muted);">${t.channelName} • ${t.duration} сек.</div>
+                  </div>
+                  <button class="btn-quick" onclick="playAudioTrack(${idx})">Play ▶</button>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    function selectChat(chatId) {
+      activeChatId = chatId;
+      render();
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById('chat-input');
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+
+      await fetch('/api/telegram/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chatId: activeChatId, text })
+      });
+      fetchState();
+    }
+
+    async function updateDealStage(chatId, stage) {
+      await fetch('/api/crm/stage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chatId, stage })
+      });
+      fetchState();
+    }
+
+    async function playAudioTrack(index) {
+      await fetch('/api/music/play', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ index })
+      });
+      fetchState();
+    }
+
+    async function togglePlayAudio() {
+      await fetch('/api/music/toggle', { method: 'POST' });
+      fetchState();
+    }
+
+    async function nextAudioTrack() {
+      await fetch('/api/music/next', { method: 'POST' });
+      fetchState();
+    }
+
+    async function submitHaaT(nodeId) {
+      const input = document.getElementById('haat-input-' + nodeId).value.trim();
+      if (!input) return;
+
+      const res = await fetch('/api/haat/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nodeId, input })
+      });
+      const data = await res.json();
+      if (!data.accepted) {
+        alert('Отклонено схемой валидации: ' + (data.error || 'Неверный формат'));
+      }
+      fetchState();
+    }
+
+    async function rejectHaaT(nodeId) {
+      await fetch('/api/haat/reject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nodeId })
+      });
+      fetchState();
+    }
+
+    setInterval(fetchState, 1500);
+    fetchState();
+  </script>
+</body>
+</html>
